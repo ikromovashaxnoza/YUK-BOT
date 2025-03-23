@@ -20,16 +20,34 @@ def submit():
     price = request.form.get("price")
     location = request.form.get("location")
     comments = request.form.get("comments")
-
-    message = f"📦 **Yangi yuk e'loni!**\n\n👤 Rol: {role}\n📞 Telefon: {phone}\n📦 Yuk turi: {cargo_type}\n⚖ Yuk hajmi: {cargo_weight} tonna\n📌 Manzil: {location}\n💰 Narx: {price}\n📝 Izoh: {comments}"
-
-    send_telegram_message(message)
-    return "Ma'lumot yuborildi!", 200
+    
+    message = f"""
+    📦 **Yangi yuk e'loni!**
+    👤 Rol: {role}
+    📞 Telefon: {phone}
+    📦 Yuk turi: {cargo_type}
+    ⚖ Yuk hajmi: {cargo_weight} tonna
+    📌 Manzil: {location}
+    💰 Narx: {price}
+    📝 Izoh: {comments}
+    """
+    
+    if send_telegram_message(message):
+        return "Ma'lumot muvaffaqiyatli yuborildi!", 200
+    else:
+        return "Xatolik yuz berdi, qayta urinib ko'ring!", 500
 
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
-    requests.post(url, data=data)
+    
+    try:
+        response = requests.post(url, data=data)
+        response.raise_for_status()
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"Telegram xatosi: {e}")
+        return False
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
