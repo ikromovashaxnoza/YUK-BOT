@@ -14,36 +14,46 @@ def index():
 @app.route("/submit", methods=["POST"])
 def submit():
     try:
-        role = request.form.get("role")
-        phone = request.form.get("phone")
-        cargo_type = request.form.get("cargo-type")
-        cargo_weight = request.form.get("cargo-weight")
-        cargo_name = request.form.get("cargo-name")
-        price = request.form.get("price")
-        location = request.form.get("location")
-        comments = request.form.get("comments")
+        # Forma maydonlarini olish
+        role = request.form.get("role", "").strip()
+        phone = request.form.get("phone", "").strip()
+        cargo_type = request.form.get("cargo-type", "").strip()
+        cargo_weight = request.form.get("cargo-weight", "").strip()
+        cargo_name = request.form.get("cargo-name", "").strip()
+        price = request.form.get("price", "").strip()
+        location = request.form.get("location", "").strip()
+        comments = request.form.get("comments", "").strip()
 
-        if not (role and phone and cargo_type and cargo_weight and price and location):
-            return jsonify({"error": "Barcha maydonlarni to'ldiring!"}), 400
+        # Majburiy maydonlar tekshiruvi
+        if not all([role, phone, cargo_type, cargo_weight, price, location]):
+            return jsonify({"error": "Barcha majburiy maydonlarni to'ldiring!"}), 400
 
-        message = (f"\U0001F4E6 **Yangi yuk e'loni!**\n\n"
-                   f"👤 Rol: {role}\n"
-                   f"📞 Telefon: {phone}\n"
-                   f"📦 Yuk turi: {cargo_type}\n"
-                   f"⚖ Yuk hajmi: {cargo_weight} tonna\n"
-                   f"📌 Manzil: {location}\n"
-                   f"💰 Narx: {price}\n"
-                   f"📝 Izoh: {comments}")
-        
+        # Telefon raqamni tekshirish
+        if not phone.isdigit() or len(phone) < 7:
+            return jsonify({"error": "Telefon raqami noto‘g‘ri formatda!"}), 400
+
+        # Telegramga yuboriladigan xabar yaratish
+        message = (f"📦 **Yangi yuk e'loni!**\n\n"
+                   f"👤 **Rol:** {role}\n"
+                   f"📞 **Telefon:** {phone}\n"
+                   f"📦 **Yuk turi:** {cargo_type}\n"
+                   f"⚖ **Yuk hajmi:** {cargo_weight} tonna\n"
+                   f"📌 **Manzil:** {location}\n"
+                   f"💰 **Narx:** {price}")
+
+        # Agar izoh mavjud bo‘lsa, qo‘shish
+        if comments:
+            message += f"\n📝 **Izoh:** {comments}"
+
         response = send_telegram_message(message)
         
         if response:
-            return jsonify({"success": "Ma'lumot yuborildi!"}), 200
+            return jsonify({"success": "Ma'lumot muvaffaqiyatli yuborildi!"}), 200
         else:
-            return jsonify({"error": "Telegramga yuborishda xatolik!"}), 500
+            return jsonify({"error": "Telegramga yuborishda xatolik yuz berdi!"}), 500
     
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Server xatosi: {str(e)}"}), 500
 
 
 def send_telegram_message(text):
@@ -60,6 +70,7 @@ def send_telegram_message(text):
     except requests.exceptions.RequestException as e:
         print("So‘rov xatosi:", e)
         return False
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
