@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import os
+import re  # Telefon uchun regex tekshiruv
 
 app = Flask(__name__)
 
@@ -14,7 +15,7 @@ def index():
 @app.route("/submit", methods=["POST"])
 def submit():
     try:
-        # Forma maydonlarini olish
+        # Forma ma'lumotlarini olish
         role = request.form.get("role", "").strip()
         phone = request.form.get("phone", "").strip()
         cargo_type = request.form.get("cargo-type", "").strip()
@@ -28,22 +29,27 @@ def submit():
         if not all([role, phone, cargo_type, cargo_weight, price, location]):
             return jsonify({"error": "Barcha majburiy maydonlarni to'ldiring!"}), 400
 
-        # Telefon raqamni tekshirish
-        if not phone.isdigit() or len(phone) < 7:
-            return jsonify({"error": "Telefon raqami noto‘g‘ri formatda!"}), 400
+        # Telefon raqamni tekshirish (faqat raqamlar, uzunligi kamida 7 bo'lishi kerak)
+        if not re.match(r"^\+?\d{7,15}$", phone):
+            return jsonify({"error": "Telefon raqami noto‘g‘ri formatda! +998901234567 yoki 901234567 bo‘lishi kerak"}), 400
+
+        # Yuk og'irligi faqat son bo'lishini tekshirish
+        if not cargo_weight.isdigit():
+            return jsonify({"error": "Yuk og‘irligi faqat son bo‘lishi kerak!"}), 400
 
         # Telegramga yuboriladigan xabar yaratish
         message = (f"📦 **Yangi yuk e'loni!**\n\n"
-                   f"👤 **Rol:** {role}\n"
-                   f"📞 **Telefon:** {phone}\n"
-                   f"📦 **Yuk turi:** {cargo_type}\n"
-                   f"⚖ **Yuk hajmi:** {cargo_weight} tonna\n"
-                   f"📌 **Manzil:** {location}\n"
-                   f"💰 **Narx:** {price}")
+                   f"🔹 **Rol:** {role}\n"
+                   f"🔹 **Telefon:** `{phone}`\n"
+                   f"🔹 **Yuk turi:** {cargo_type}\n"
+                   f"🔹 **Yuk nomi:** {cargo_name}\n"
+                   f"🔹 **Yuk hajmi:** {cargo_weight} tonna\n"
+                   f"🔹 **Manzil:** {location}\n"
+                   f"🔹 **Narx:** {price} so'm")
 
         # Agar izoh mavjud bo‘lsa, qo‘shish
         if comments:
-            message += f"\n📝 **Izoh:** {comments}"
+            message += f"\n\n📝 **Izoh:** {comments}"
 
         response = send_telegram_message(message)
         
